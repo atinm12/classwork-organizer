@@ -29,6 +29,33 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "points-asc", label: "Points — low to high" },
 ];
 
+/** How many days of past-due items the "recent" window looks back. */
+const LOOKBACK_DAYS = 10;
+
+type RangeKey = "recent" | "upcoming" | "all";
+
+const RANGE_OPTIONS: { key: RangeKey; label: string }[] = [
+  { key: "recent", label: `Last ${LOOKBACK_DAYS} days & upcoming` },
+  { key: "upcoming", label: "Upcoming only" },
+  { key: "all", label: "All dates" },
+];
+
+/** Keep dated items within the selected time window. */
+function inRange(iso: string, range: RangeKey, now: number): boolean {
+  if (range === "all") return true;
+  const due = new Date(iso).getTime();
+  if (Number.isNaN(due)) return true; // don't drop unparseable dates
+  if (range === "upcoming") return due >= now;
+  return due >= now - LOOKBACK_DAYS * 86_400_000; // "recent"
+}
+
+/** Past-due and still outstanding (not already submitted/graded on Canvas). */
+function isOverdue(item: ClassworkItem, now: number): boolean {
+  if (!item.dueDate) return false;
+  if (new Date(item.dueDate).getTime() >= now) return false;
+  return !/submitted|graded/i.test(item.status ?? "");
+}
+
 /**
  * Comparators for the dated list. Items with no due date are handled separately
  * (the TBA section), so every item here has a non-null dueDate. Points can be
@@ -88,9 +115,10 @@ function statusClass(status: string): string {
   return "badge badge-neutral";
 }
 
-function ItemCard({ item }: { item: ClassworkItem }) {
+function ItemCard({ item, now }: { item: ClassworkItem; now: number }) {
+  const overdue = isOverdue(item, now);
   return (
-    <li className="card">
+    <li className={overdue ? "card overdue" : "card"}>
       <div className="card-main">
         <div className="card-title">
           {item.url ? (
@@ -109,6 +137,7 @@ function ItemCard({ item }: { item: ClassworkItem }) {
           {item.points != null && (
             <span className="points">{item.points} pts</span>
           )}
+          {overdue && <span className="badge badge-overdue">overdue</span>}
           {item.status && (
             <span className={statusClass(item.status)}>{item.status}</span>
           )}
@@ -131,6 +160,7 @@ export default function Home() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [view, setView] = useState<ItemType>("assignment");
   const [sort, setSort] = useState<SortKey>("due-asc");
+  const [range, setRange] = useState<RangeKey>("recent");
 
   useEffect(() => {
     let active = true;
@@ -152,14 +182,18 @@ export default function Home() {
     };
   }, []);
 
+  const now = data ? Date.now() : 0;
+
   const { dated, tba } = useMemo(() => {
     const items = (data?.items ?? []).filter((i) => i.type === view);
-    const dated = items.filter((i) => i.dueDate).sort(makeComparator(sort));
+    const dated = items
+      .filter((i) => i.dueDate && inRange(i.dueDate, range, now))
+      .sort(makeComparator(sort));
     const tba = items
       .filter((i) => !i.dueDate)
       .sort((a, b) => a.course.localeCompare(b.course));
     return { dated, tba };
-  }, [data, view, sort]);
+  }, [data, view, sort, range, now]);
 
   const sourceErrors = data
     ? (Object.entries(data.errors) as [SourceId, string | null][]).filter(
@@ -200,19 +234,35 @@ export default function Home() {
           </button>
         </nav>
 
-        <label className="sort">
-          <span className="sort-label">Sort</span>
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortKey)}
-          >
-            {SORT_OPTIONS.map((o) => (
-              <option key={o.key} value={o.key}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="selectors">
+          <label className="control">
+            <span className="control-label">Show</span>
+            <select
+              value={range}
+              onChange={(e) => setRange(e.target.value as RangeKey)}
+            >
+              {RANGE_OPTIONS.map((o) => (
+                <option key={o.key} value={o.key}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="control">
+            <span className="control-label">Sort</span>
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortKey)}
+            >
+              {SORT_OPTIONS.map((o) => (
+                <option key={o.key} value={o.key}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
       {sourceErrors.length > 0 && (
@@ -240,7 +290,7 @@ export default function Home() {
           ) : (
             <ul className="list">
               {dated.map((item) => (
-                <ItemCard key={item.id} item={item} />
+                <ItemCard key={item.id} item={item} now={now} />
               ))}
             </ul>
           )}
@@ -250,7 +300,7 @@ export default function Home() {
               <h2>Date TBA</h2>
               <ul className="list">
                 {tba.map((item) => (
-                  <ItemCard key={item.id} item={item} />
+                  <ItemCard key={item.id} item={item} now={now} />
                 ))}
               </ul>
             </section>

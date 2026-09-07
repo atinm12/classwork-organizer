@@ -61,18 +61,25 @@ body {
   gap: 0.5rem;
 }
 
-.sort {
+.selectors {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.control {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
 }
 
-.sort-label {
+.control-label {
   color: var(--muted);
   font-size: 0.8rem;
 }
 
-.sort select {
+.control select {
   background: var(--panel);
   color: var(--text);
   border: 1px solid var(--border);
@@ -86,11 +93,11 @@ body {
   background-position: right 0.6rem center;
 }
 
-.sort select:hover {
+.control select:hover {
   border-color: var(--accent);
 }
 
-.sort select:focus {
+.control select:focus {
   outline: none;
   border-color: var(--accent);
 }
@@ -167,6 +174,15 @@ body {
   padding: 0.85rem 1rem;
 }
 
+.card.overdue {
+  border-left: 3px solid var(--missing);
+  background: linear-gradient(
+    90deg,
+    rgba(229, 72, 77, 0.08),
+    var(--panel) 40%
+  );
+}
+
 .card-title {
   font-size: 0.98rem;
   font-weight: 600;
@@ -234,10 +250,16 @@ body {
   border-color: var(--c113);
 }
 
-.badge-missing {
+.badge-missing,
+.badge-overdue {
   background: rgba(229, 72, 77, 0.15);
   color: #ff9a9c;
   border-color: rgba(229, 72, 77, 0.4);
+}
+
+.badge-overdue {
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .badge-graded {
