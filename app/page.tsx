@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import type {
   ClassworkItem,
   ClassworkResponse,
@@ -130,6 +130,37 @@ function formatDue(iso: string): string {
   }
 }
 
+function formatToday(now: number): string {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(now));
+}
+
+/**
+ * Index in the (chronologically sorted) dated list where a "today" divider
+ * belongs — the boundary between past-due and upcoming items. Returns -1 for
+ * non-chronological sorts, where a today marker wouldn't be meaningful.
+ */
+function todayDividerIndex(
+  dated: ClassworkItem[],
+  sort: SortKey,
+  now: number
+): number {
+  if (sort === "due-asc") {
+    const i = dated.findIndex((it) => new Date(it.dueDate!).getTime() >= now);
+    return i === -1 ? dated.length : i; // all past → divider at the very end
+  }
+  if (sort === "due-desc") {
+    const i = dated.findIndex((it) => new Date(it.dueDate!).getTime() < now);
+    return i === -1 ? dated.length : i; // all upcoming → divider at the end
+  }
+  return -1;
+}
+
 function statusClass(status: string): string {
   const s = status.toLowerCase();
   if (s.includes("miss")) return "badge badge-missing";
@@ -246,7 +277,7 @@ export default function Home() {
 
   const now = data ? Date.now() : 0;
 
-  const { dated, tba } = useMemo(() => {
+  const { dated, tba, dividerIndex } = useMemo(() => {
     const items = (data?.items ?? []).filter((i) => i.type === view);
     const dated = items
       .filter((i) => i.dueDate && inRange(i.dueDate, range, now))
@@ -254,7 +285,8 @@ export default function Home() {
     const tba = items
       .filter((i) => !i.dueDate)
       .sort((a, b) => a.course.localeCompare(b.course));
-    return { dated, tba };
+    const dividerIndex = todayDividerIndex(dated, sort, now);
+    return { dated, tba, dividerIndex };
   }, [data, view, sort, range, now]);
 
   const sourceErrors = data
@@ -351,15 +383,26 @@ export default function Home() {
             </p>
           ) : (
             <ul className="list">
-              {dated.map((item) => (
-                <ItemCard
-                  key={item.id}
-                  item={item}
-                  now={now}
-                  done={done.has(item.id)}
-                  onToggleDone={toggleDone}
-                />
+              {dated.map((item, i) => (
+                <Fragment key={item.id}>
+                  {i === dividerIndex && (
+                    <li className="today-divider" aria-hidden="true">
+                      <span>Today · {formatToday(now)}</span>
+                    </li>
+                  )}
+                  <ItemCard
+                    item={item}
+                    now={now}
+                    done={done.has(item.id)}
+                    onToggleDone={toggleDone}
+                  />
+                </Fragment>
               ))}
+              {dividerIndex === dated.length && dated.length > 0 && (
+                <li className="today-divider" aria-hidden="true">
+                  <span>Today · {formatToday(now)}</span>
+                </li>
+              )}
             </ul>
           )}
 
