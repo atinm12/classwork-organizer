@@ -14,6 +14,11 @@ source is down or its page structure changes, the others still render (you'll se
 "Couldn't load … right now" notice for the broken one). There is no database, cache, or
 background refresh — every load fetches live.
 
+**Interface:** toggle between Assignments and Tests, filter by time window (default: last 10
+days & upcoming), and sort by due date / course / points. Overdue items (past due and not yet
+submitted/graded) are flagged. A **Mark done** button on each item is saved in your browser
+(`localStorage`) — it's per-browser and per-device, not synced, since there's no backend.
+
 ## Tech
 
 Next.js (App Router) + TypeScript. Scraping via `cheerio`. Backend is a single Next.js API

@@ -56,6 +56,29 @@ function isOverdue(item: ClassworkItem, now: number): boolean {
   return !/submitted|graded/i.test(item.status ?? "");
 }
 
+// --- "Mark as done" persistence (per-viewer, browser localStorage) ----------
+
+const DONE_STORAGE_KEY = "classwork-done-v1";
+
+function loadDone(): Set<string> {
+  try {
+    const raw = localStorage.getItem(DONE_STORAGE_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? new Set(arr) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function saveDone(ids: Set<string>): void {
+  try {
+    localStorage.setItem(DONE_STORAGE_KEY, JSON.stringify([...ids]));
+  } catch {
+    // Private mode / storage disabled — done state is best-effort only.
+  }
+}
+
 /**
  * Comparators for the dated list. Items with no due date are handled separately
  * (the TBA section), so every item here has a non-null dueDate. Points can be
@@ -115,10 +138,23 @@ function statusClass(status: string): string {
   return "badge badge-neutral";
 }
 
-function ItemCard({ item, now }: { item: ClassworkItem; now: number }) {
-  const overdue = isOverdue(item, now);
+function ItemCard({
+  item,
+  now,
+  done,
+  onToggleDone,
+}: {
+  item: ClassworkItem;
+  now: number;
+  done: boolean;
+  onToggleDone: (id: string) => void;
+}) {
+  const overdue = !done && isOverdue(item, now);
+  const cls = ["card", overdue && "overdue", done && "done"]
+    .filter(Boolean)
+    .join(" ");
   return (
-    <li className={overdue ? "card overdue" : "card"}>
+    <li className={cls}>
       <div className="card-main">
         <div className="card-title">
           {item.url ? (
@@ -137,18 +173,28 @@ function ItemCard({ item, now }: { item: ClassworkItem; now: number }) {
           {item.points != null && (
             <span className="points">{item.points} pts</span>
           )}
+          {done && <span className="badge badge-done">done</span>}
           {overdue && <span className="badge badge-overdue">overdue</span>}
           {item.status && (
             <span className={statusClass(item.status)}>{item.status}</span>
           )}
         </div>
       </div>
-      <div className="card-due">
-        {item.dueDate ? (
-          formatDue(item.dueDate)
-        ) : (
-          <span className="tba">{item.dueLabel ?? "TBA"}</span>
-        )}
+      <div className="card-side">
+        <div className="card-due">
+          {item.dueDate ? (
+            formatDue(item.dueDate)
+          ) : (
+            <span className="tba">{item.dueLabel ?? "TBA"}</span>
+          )}
+        </div>
+        <button
+          className="done-btn"
+          onClick={() => onToggleDone(item.id)}
+          aria-pressed={done}
+        >
+          {done ? "Undo" : "Mark done"}
+        </button>
       </div>
     </li>
   );
@@ -161,6 +207,22 @@ export default function Home() {
   const [view, setView] = useState<ItemType>("assignment");
   const [sort, setSort] = useState<SortKey>("due-asc");
   const [range, setRange] = useState<RangeKey>("recent");
+  const [done, setDone] = useState<Set<string>>(new Set());
+
+  // Load persisted "done" ids once, on the client.
+  useEffect(() => {
+    setDone(loadDone());
+  }, []);
+
+  const toggleDone = (id: string) => {
+    setDone((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      saveDone(next);
+      return next;
+    });
+  };
 
   useEffect(() => {
     let active = true;
@@ -290,7 +352,13 @@ export default function Home() {
           ) : (
             <ul className="list">
               {dated.map((item) => (
-                <ItemCard key={item.id} item={item} now={now} />
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  now={now}
+                  done={done.has(item.id)}
+                  onToggleDone={toggleDone}
+                />
               ))}
             </ul>
           )}
@@ -300,7 +368,13 @@ export default function Home() {
               <h2>Date TBA</h2>
               <ul className="list">
                 {tba.map((item) => (
-                  <ItemCard key={item.id} item={item} now={now} />
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    now={now}
+                    done={done.has(item.id)}
+                    onToggleDone={toggleDone}
+                  />
                 ))}
               </ul>
             </section>

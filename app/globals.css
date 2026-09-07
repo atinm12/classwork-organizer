@@ -209,12 +209,56 @@ body {
   color: var(--muted);
 }
 
-.card-due {
+.card-side {
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.card-due {
   text-align: right;
   font-size: 0.82rem;
   color: var(--text);
   white-space: nowrap;
+}
+
+.done-btn {
+  background: var(--panel-2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.done-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.card.done {
+  opacity: 0.55;
+}
+
+.card.done .card-title {
+  text-decoration: line-through;
+  text-decoration-color: var(--muted);
+}
+
+.card.done .done-btn {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.badge-done {
+  background: rgba(48, 164, 108, 0.15);
+  color: #74e0a8;
+  border-color: rgba(48, 164, 108, 0.4);
 }
 
 .tba {
