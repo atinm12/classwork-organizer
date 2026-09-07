@@ -47,10 +47,52 @@ body {
   font-size: 0.85rem;
 }
 
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 1.5rem 0 1rem;
+}
+
 .tabs {
   display: flex;
   gap: 0.5rem;
-  margin: 1.5rem 0 1rem;
+}
+
+.sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.sort-label {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.sort select {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.45rem 2rem 0.45rem 0.7rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' fill='none' stroke='%239aa3b2' stroke-width='1.5'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+}
+
+.sort select:hover {
+  border-color: var(--accent);
+}
+
+.sort select:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
 .tab {

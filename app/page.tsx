@@ -14,6 +14,56 @@ const SOURCE_LABELS: Record<SourceId, string> = {
   "15-113": "15-113",
 };
 
+type SortKey =
+  | "due-asc"
+  | "due-desc"
+  | "course-asc"
+  | "points-desc"
+  | "points-asc";
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: "due-asc", label: "Due date — earliest first" },
+  { key: "due-desc", label: "Due date — latest first" },
+  { key: "course-asc", label: "Course — A to Z" },
+  { key: "points-desc", label: "Points — high to low" },
+  { key: "points-asc", label: "Points — low to high" },
+];
+
+/**
+ * Comparators for the dated list. Items with no due date are handled separately
+ * (the TBA section), so every item here has a non-null dueDate. Points can be
+ * null (CMU sources) — those sort to the end regardless of direction.
+ */
+function makeComparator(sort: SortKey) {
+  const byDueAsc = (a: ClassworkItem, b: ClassworkItem) =>
+    a.dueDate!.localeCompare(b.dueDate!);
+
+  switch (sort) {
+    case "due-desc":
+      return (a: ClassworkItem, b: ClassworkItem) => byDueAsc(b, a);
+    case "course-asc":
+      return (a: ClassworkItem, b: ClassworkItem) =>
+        a.course.localeCompare(b.course) || byDueAsc(a, b);
+    case "points-desc":
+      return (a: ClassworkItem, b: ClassworkItem) => {
+        if (a.points == null && b.points == null) return byDueAsc(a, b);
+        if (a.points == null) return 1;
+        if (b.points == null) return -1;
+        return b.points - a.points || byDueAsc(a, b);
+      };
+    case "points-asc":
+      return (a: ClassworkItem, b: ClassworkItem) => {
+        if (a.points == null && b.points == null) return byDueAsc(a, b);
+        if (a.points == null) return 1;
+        if (b.points == null) return -1;
+        return a.points - b.points || byDueAsc(a, b);
+      };
+    case "due-asc":
+    default:
+      return byDueAsc;
+  }
+}
+
 function formatDue(iso: string): string {
   try {
     return new Intl.DateTimeFormat("en-US", {
@@ -21,6 +71,7 @@ function formatDue(iso: string): string {
       weekday: "short",
       month: "short",
       day: "numeric",
+      year: "numeric",
       hour: "numeric",
       minute: "2-digit",
     }).format(new Date(iso));
@@ -79,6 +130,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [view, setView] = useState<ItemType>("assignment");
+  const [sort, setSort] = useState<SortKey>("due-asc");
 
   useEffect(() => {
     let active = true;
@@ -102,12 +154,12 @@ export default function Home() {
 
   const { dated, tba } = useMemo(() => {
     const items = (data?.items ?? []).filter((i) => i.type === view);
-    const dated = items
-      .filter((i) => i.dueDate)
-      .sort((a, b) => a.dueDate!.localeCompare(b.dueDate!));
-    const tba = items.filter((i) => !i.dueDate);
+    const dated = items.filter((i) => i.dueDate).sort(makeComparator(sort));
+    const tba = items
+      .filter((i) => !i.dueDate)
+      .sort((a, b) => a.course.localeCompare(b.course));
     return { dated, tba };
-  }, [data, view]);
+  }, [data, view, sort]);
 
   const sourceErrors = data
     ? (Object.entries(data.errors) as [SourceId, string | null][]).filter(
@@ -132,20 +184,36 @@ export default function Home() {
         )}
       </header>
 
-      <nav className="tabs">
-        <button
-          className={view === "assignment" ? "tab active" : "tab"}
-          onClick={() => setView("assignment")}
-        >
-          Assignments
-        </button>
-        <button
-          className={view === "test" ? "tab active" : "tab"}
-          onClick={() => setView("test")}
-        >
-          Tests
-        </button>
-      </nav>
+      <div className="controls">
+        <nav className="tabs">
+          <button
+            className={view === "assignment" ? "tab active" : "tab"}
+            onClick={() => setView("assignment")}
+          >
+            Assignments
+          </button>
+          <button
+            className={view === "test" ? "tab active" : "tab"}
+            onClick={() => setView("test")}
+          >
+            Tests
+          </button>
+        </nav>
+
+        <label className="sort">
+          <span className="sort-label">Sort</span>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortKey)}
+          >
+            {SORT_OPTIONS.map((o) => (
+              <option key={o.key} value={o.key}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
       {sourceErrors.length > 0 && (
         <div className="notices">
