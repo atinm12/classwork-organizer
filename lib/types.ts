@@ -1,4 +1,4 @@
-export type SourceId = "canvas" | "15-121" | "15-113";
+export type SourceId = "canvas" | "15-121" | "15-113" | "custom";
 
 export type ItemType = "assignment" | "test";
 

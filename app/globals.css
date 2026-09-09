@@ -9,6 +9,7 @@
   --canvas: #e2703a;
   --c121: #7c5cff;
   --c113: #22a06b;
+  --ccustom: #b5793a;
   --missing: #e5484d;
   --graded: #30a46c;
   --submitted: #4c8bf5;
@@ -66,6 +67,81 @@ body {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
+}
+
+.add-btn {
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.add-btn:hover {
+  filter: brightness(1.1);
+}
+
+.add-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.field-grow {
+  flex: 1 1 200px;
+}
+
+.field label {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.add-form input,
+.add-form select {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.add-form input:focus,
+.add-form select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.add-submit {
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.add-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .control {
@@ -224,6 +300,12 @@ body {
   white-space: nowrap;
 }
 
+.card-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .done-btn {
   background: var(--panel-2);
   color: var(--muted);
@@ -239,6 +321,23 @@ body {
 .done-btn:hover {
   color: var(--text);
   border-color: var(--accent);
+}
+
+.delete-btn {
+  background: var(--panel-2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.delete-btn:hover {
+  color: #ff9a9c;
+  border-color: rgba(229, 72, 77, 0.5);
 }
 
 .card.done {
@@ -292,6 +391,11 @@ body {
 .badge-15-113 {
   background: var(--c113);
   border-color: var(--c113);
+}
+
+.badge-custom {
+  background: var(--ccustom);
+  border-color: var(--ccustom);
 }
 
 .badge-missing,

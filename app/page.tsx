@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
+import { easternIso } from "@/lib/dates";
 import type {
   ClassworkItem,
   ClassworkResponse,
@@ -12,6 +13,7 @@ const SOURCE_LABELS: Record<SourceId, string> = {
   canvas: "Canvas",
   "15-121": "15-121",
   "15-113": "15-113",
+  custom: "Custom",
 };
 
 type SortKey =
@@ -77,6 +79,48 @@ function saveDone(ids: Set<string>): void {
   } catch {
     // Private mode / storage disabled — done state is best-effort only.
   }
+}
+
+// --- Custom (user-added) items, persisted per-viewer in localStorage --------
+
+const CUSTOM_STORAGE_KEY = "classwork-custom-v1";
+
+function loadCustom(): ClassworkItem[] {
+  try {
+    const raw = localStorage.getItem(CUSTOM_STORAGE_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? (arr as ClassworkItem[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCustom(items: ClassworkItem[]): void {
+  try {
+    localStorage.setItem(CUSTOM_STORAGE_KEY, JSON.stringify(items));
+  } catch {
+    // Private mode / storage disabled — custom items are best-effort only.
+  }
+}
+
+/**
+ * Convert a datetime-local value ("YYYY-MM-DDTHH:mm", or "YYYY-MM-DD" for a
+ * date with no time) into an Eastern-time ISO string. Returns null if empty.
+ * Times are interpreted as US Eastern to match the fetched sources.
+ */
+function customDueToIso(value: string): string | null {
+  if (!value) return null;
+  const m = value.match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+  if (!m) return null;
+  const [, y, mo, d, hh, mm] = m;
+  return easternIso(
+    Number(mo),
+    Number(d),
+    hh ? Number(hh) : 23,
+    mm ? Number(mm) : 59,
+    Number(y)
+  );
 }
 
 /**
@@ -174,11 +218,13 @@ function ItemCard({
   now,
   done,
   onToggleDone,
+  onDelete,
 }: {
   item: ClassworkItem;
   now: number;
   done: boolean;
   onToggleDone: (id: string) => void;
+  onDelete?: (id: string) => void;
 }) {
   const overdue = !done && isOverdue(item, now);
   const cls = ["card", overdue && "overdue", done && "done"]
@@ -219,13 +265,25 @@ function ItemCard({
             <span className="tba">{item.dueLabel ?? "TBA"}</span>
           )}
         </div>
-        <button
-          className="done-btn"
-          onClick={() => onToggleDone(item.id)}
-          aria-pressed={done}
-        >
-          {done ? "Undo" : "Mark done"}
-        </button>
+        <div className="card-buttons">
+          <button
+            className="done-btn"
+            onClick={() => onToggleDone(item.id)}
+            aria-pressed={done}
+          >
+            {done ? "Undo" : "Mark done"}
+          </button>
+          {onDelete && (
+            <button
+              className="delete-btn"
+              onClick={() => onDelete(item.id)}
+              aria-label={`Delete ${item.title}`}
+              title="Delete"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
     </li>
   );
@@ -239,10 +297,19 @@ export default function Home() {
   const [sort, setSort] = useState<SortKey>("due-asc");
   const [range, setRange] = useState<RangeKey>("recent");
   const [done, setDone] = useState<Set<string>>(new Set());
+  const [custom, setCustom] = useState<ClassworkItem[]>([]);
 
-  // Load persisted "done" ids once, on the client.
+  // Form state for adding a custom assignment.
+  const [showForm, setShowForm] = useState(false);
+  const [fTitle, setFTitle] = useState("");
+  const [fCourse, setFCourse] = useState("");
+  const [fType, setFType] = useState<ItemType>("assignment");
+  const [fDue, setFDue] = useState("");
+
+  // Load persisted "done" ids and custom items once, on the client.
   useEffect(() => {
     setDone(loadDone());
+    setCustom(loadCustom());
   }, []);
 
   const toggleDone = (id: string) => {
@@ -251,6 +318,40 @@ export default function Home() {
       if (next.has(id)) next.delete(id);
       else next.add(id);
       saveDone(next);
+      return next;
+    });
+  };
+
+  const addCustom = () => {
+    const title = fTitle.trim();
+    if (!title) return;
+    const item: ClassworkItem = {
+      id: `custom-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      course: fCourse.trim() || "Custom",
+      title,
+      dueDate: customDueToIso(fDue),
+      type: fType,
+      points: null,
+      url: null,
+      status: null,
+      source: "custom",
+    };
+    setCustom((prev) => {
+      const next = [...prev, item];
+      saveCustom(next);
+      return next;
+    });
+    // Reset the form and keep it open for quick multi-entry.
+    setFTitle("");
+    setFCourse("");
+    setFDue("");
+    setFType("assignment");
+  };
+
+  const deleteCustom = (id: string) => {
+    setCustom((prev) => {
+      const next = prev.filter((i) => i.id !== id);
+      saveCustom(next);
       return next;
     });
   };
@@ -278,7 +379,8 @@ export default function Home() {
   const now = data ? Date.now() : 0;
 
   const { dated, tba, dividerIndex } = useMemo(() => {
-    const items = (data?.items ?? []).filter((i) => i.type === view);
+    const all = [...(data?.items ?? []), ...custom];
+    const items = all.filter((i) => i.type === view);
     const dated = items
       .filter((i) => i.dueDate && inRange(i.dueDate, range, now))
       .sort(makeComparator(sort));
@@ -287,7 +389,7 @@ export default function Home() {
       .sort((a, b) => a.course.localeCompare(b.course));
     const dividerIndex = todayDividerIndex(dated, sort, now);
     return { dated, tba, dividerIndex };
-  }, [data, view, sort, range, now]);
+  }, [data, custom, view, sort, range, now]);
 
   const sourceErrors = data
     ? (Object.entries(data.errors) as [SourceId, string | null][]).filter(
@@ -356,8 +458,72 @@ export default function Home() {
               ))}
             </select>
           </label>
+
+          <button
+            className="add-btn"
+            onClick={() => setShowForm((v) => !v)}
+            aria-expanded={showForm}
+          >
+            {showForm ? "Close" : "+ Add"}
+          </button>
         </div>
       </div>
+
+      {showForm && (
+        <form
+          className="add-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            addCustom();
+          }}
+        >
+          <div className="field field-grow">
+            <label htmlFor="f-title">Title</label>
+            <input
+              id="f-title"
+              type="text"
+              value={fTitle}
+              onChange={(e) => setFTitle(e.target.value)}
+              placeholder="e.g. Read chapter 4"
+              autoFocus
+              required
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="f-course">Course</label>
+            <input
+              id="f-course"
+              type="text"
+              value={fCourse}
+              onChange={(e) => setFCourse(e.target.value)}
+              placeholder="optional"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="f-type">Type</label>
+            <select
+              id="f-type"
+              value={fType}
+              onChange={(e) => setFType(e.target.value as ItemType)}
+            >
+              <option value="assignment">Assignment</option>
+              <option value="test">Test</option>
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="f-due">Due (ET)</label>
+            <input
+              id="f-due"
+              type="datetime-local"
+              value={fDue}
+              onChange={(e) => setFDue(e.target.value)}
+            />
+          </div>
+          <button type="submit" className="add-submit" disabled={!fTitle.trim()}>
+            Add
+          </button>
+        </form>
+      )}
 
       {sourceErrors.length > 0 && (
         <div className="notices">
@@ -395,6 +561,7 @@ export default function Home() {
                     now={now}
                     done={done.has(item.id)}
                     onToggleDone={toggleDone}
+                    onDelete={item.source === "custom" ? deleteCustom : undefined}
                   />
                 </Fragment>
               ))}
@@ -417,6 +584,7 @@ export default function Home() {
                     now={now}
                     done={done.has(item.id)}
                     onToggleDone={toggleDone}
+                    onDelete={item.source === "custom" ? deleteCustom : undefined}
                   />
                 ))}
               </ul>

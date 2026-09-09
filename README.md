@@ -15,9 +15,12 @@ source is down or its page structure changes, the others still render (you'll se
 background refresh — every load fetches live.
 
 **Interface:** toggle between Assignments and Tests, filter by time window (default: last 10
-days & upcoming), and sort by due date / course / points. Overdue items (past due and not yet
-submitted/graded) are flagged. A **Mark done** button on each item is saved in your browser
-(`localStorage`) — it's per-browser and per-device, not synced, since there's no backend.
+days & upcoming), and sort by due date / course / points. A "today" divider marks the boundary
+between past-due and upcoming items in the date-sorted views. Overdue items (past due and not
+yet submitted/graded) are flagged. Use **+ Add** to add your own assignments/tests with a due
+date (interpreted as US Eastern), and delete them with the ✕ button. A **Mark done** toggle on
+each item, and your custom items, are saved in your browser (`localStorage`) — per-browser and
+per-device, not synced, since there's no backend.
 
 ## Tech
 
