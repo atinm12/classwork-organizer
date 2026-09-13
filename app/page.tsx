@@ -104,6 +104,27 @@ function saveCustom(items: ClassworkItem[]): void {
   }
 }
 
+// --- "Saved me" counter, persisted per-viewer in localStorage --------------
+
+const SAVED_STORAGE_KEY = "classwork-saved-v1";
+
+function loadSaved(): number {
+  try {
+    const n = Number(localStorage.getItem(SAVED_STORAGE_KEY));
+    return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function saveSaved(n: number): void {
+  try {
+    localStorage.setItem(SAVED_STORAGE_KEY, String(n));
+  } catch {
+    // Private mode / storage disabled — best-effort only.
+  }
+}
+
 /**
  * Convert a datetime-local value ("YYYY-MM-DDTHH:mm", or "YYYY-MM-DD" for a
  * date with no time) into an Eastern-time ISO string. Returns null if empty.
@@ -298,6 +319,7 @@ export default function Home() {
   const [range, setRange] = useState<RangeKey>("recent");
   const [done, setDone] = useState<Set<string>>(new Set());
   const [custom, setCustom] = useState<ClassworkItem[]>([]);
+  const [saved, setSaved] = useState(0);
 
   // Form state for adding a custom assignment.
   const [showForm, setShowForm] = useState(false);
@@ -306,11 +328,20 @@ export default function Home() {
   const [fType, setFType] = useState<ItemType>("assignment");
   const [fDue, setFDue] = useState("");
 
-  // Load persisted "done" ids and custom items once, on the client.
+  // Load persisted state once, on the client.
   useEffect(() => {
     setDone(loadDone());
     setCustom(loadCustom());
+    setSaved(loadSaved());
   }, []);
+
+  const incrementSaved = () => {
+    setSaved((prev) => {
+      const next = prev + 1;
+      saveSaved(next);
+      return next;
+    });
+  };
 
   const toggleDone = (id: string) => {
     setDone((prev) => {
@@ -592,6 +623,14 @@ export default function Home() {
           )}
         </>
       )}
+
+      <button
+        className="saved-counter"
+        onClick={incrementSaved}
+        title="Tap when this app saved you from missing an assignment"
+      >
+        Saved Assignments 😅 <span className="saved-count">{saved}</span>
+      </button>
     </main>
   );
 }

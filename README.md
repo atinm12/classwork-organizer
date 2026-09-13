@@ -20,7 +20,9 @@ between past-due and upcoming items in the date-sorted views. Overdue items (pas
 yet submitted/graded) are flagged. Use **+ Add** to add your own assignments/tests with a due
 date (interpreted as US Eastern), and delete them with the ✕ button. A **Mark done** toggle on
 each item, and your custom items, are saved in your browser (`localStorage`) — per-browser and
-per-device, not synced, since there's no backend.
+per-device, not synced, since there's no backend. A **Saved Assignments 😅** counter in the
+bottom-left corner is a just-for-fun tally you bump whenever the app saves you from missing
+something (also stored in `localStorage`).
 
 ## Tech
 
