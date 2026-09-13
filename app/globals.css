@@ -464,20 +464,43 @@ body {
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 999px;
-  padding: 0.5rem 0.9rem;
+  padding: 0.4rem 0.6rem 0.4rem 0.9rem;
   font-size: 0.82rem;
   font-weight: 600;
-  cursor: pointer;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.saved-label {
+  white-space: nowrap;
+}
+
+.saved-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
   transition: transform 0.1s ease, border-color 0.15s ease;
 }
 
-.saved-counter:hover {
+.saved-step:hover:not(:disabled) {
   border-color: var(--accent);
 }
 
-.saved-counter:active {
-  transform: scale(0.94);
+.saved-step:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+.saved-step:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .saved-count {

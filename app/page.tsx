@@ -343,6 +343,14 @@ export default function Home() {
     });
   };
 
+  const decrementSaved = () => {
+    setSaved((prev) => {
+      const next = Math.max(0, prev - 1);
+      saveSaved(next);
+      return next;
+    });
+  };
+
   const toggleDone = (id: string) => {
     setDone((prev) => {
       const next = new Set(prev);
@@ -624,13 +632,28 @@ export default function Home() {
         </>
       )}
 
-      <button
+      <div
         className="saved-counter"
-        onClick={incrementSaved}
-        title="Tap when this app saved you from missing an assignment"
+        title="Bump when this app saved you from missing an assignment"
       >
-        Saved Assignments 😅 <span className="saved-count">{saved}</span>
-      </button>
+        <span className="saved-label">Saved Assignments 😅</span>
+        <button
+          className="saved-step"
+          onClick={decrementSaved}
+          disabled={saved === 0}
+          aria-label="Decrease saved count"
+        >
+          −
+        </button>
+        <span className="saved-count">{saved}</span>
+        <button
+          className="saved-step"
+          onClick={incrementSaved}
+          aria-label="Increase saved count"
+        >
+          +
+        </button>
+      </div>
     </main>
   );
 }
