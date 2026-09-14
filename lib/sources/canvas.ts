@@ -41,6 +41,9 @@ const EXCLUDED_COURSE_PATTERNS = [
   "computer science assessment",
   "tepper undergraduate",
   "tepper school hackathon",
+  "core@cmu",
+  "career launch",
+  "summer undergraduate research",
 ];
 
 function isExcludedCourse(name: string): boolean {
