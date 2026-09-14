@@ -28,6 +28,26 @@ interface CanvasAssignment {
 
 const PAGE_CAP = 10; // safety cap on pagination per request
 
+/**
+ * Canvas "courses" to hide — old terms, placement exams, and org/admin shells
+ * that aren't real coursework. Matched case-insensitively as substrings of the
+ * course name. Edit this list to show/hide more.
+ */
+const EXCLUDED_COURSE_PATTERNS = [
+  "animal minds",
+  "entrepreneurship",
+  "tepper class of 2029",
+  "microeconomics placement",
+  "computer science assessment",
+  "tepper undergraduate",
+  "tepper school hackathon",
+];
+
+function isExcludedCourse(name: string): boolean {
+  const n = name.toLowerCase();
+  return EXCLUDED_COURSE_PATTERNS.some((p) => n.includes(p));
+}
+
 /** Parse the RFC-5988 Link header and return the rel="next" URL, if any. */
 function nextLink(linkHeader: string | null): string | null {
   if (!linkHeader) return null;
@@ -97,9 +117,12 @@ export async function fetchCanvas(): Promise<ClassworkItem[]> {
     );
   }
 
-  const courses = await canvasGetAll<CanvasCourse>(
+  const allCourses = await canvasGetAll<CanvasCourse>(
     "/courses?enrollment_state=active&per_page=100",
     token
+  );
+  const courses = allCourses.filter(
+    (c) => !isExcludedCourse(c.name || c.course_code || "")
   );
 
   const perCourse = await Promise.allSettled(
