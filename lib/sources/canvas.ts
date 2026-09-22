@@ -51,6 +51,21 @@ function isExcludedCourse(name: string): boolean {
   return EXCLUDED_COURSE_PATTERNS.some((p) => n.includes(p));
 }
 
+/**
+ * Manual due-date corrections for assignments whose Canvas due date is wrong or
+ * missing at the assignment level (e.g. the real deadline lives only in a module
+ * header). Keyed by Canvas assignment id → correct ISO date. Remove an entry
+ * once the instructor fixes the date in Canvas.
+ *
+ * - 1021489 "Week 4: RiQ'a Workbook pp 8-11": Canvas says Feb 9 2026 (stale).
+ * - 1021817 "Journal & Portfolio Entries": no assignment-level due date.
+ * Both belong to the "HOMEWORK-WEEK 04: DUE MONDAY, Sept 21, 7 PM" module.
+ */
+const ASSIGNMENT_DUE_OVERRIDES: Record<number, string> = {
+  1021489: "2026-09-21T19:00:00-04:00",
+  1021817: "2026-09-21T19:00:00-04:00",
+};
+
 /** Parse the RFC-5988 Link header and return the rel="next" URL, if any. */
 function nextLink(linkHeader: string | null): string | null {
   if (!linkHeader) return null;
@@ -136,18 +151,21 @@ export async function fetchCanvas(): Promise<ClassworkItem[]> {
       );
       const courseName =
         course.name || course.course_code || `Course ${course.id}`;
-      return assignments.map<ClassworkItem>((a) => ({
+      return assignments.map<ClassworkItem>((a) => {
+        const dueDate = ASSIGNMENT_DUE_OVERRIDES[a.id] ?? a.due_at ?? null;
+        return {
         id: `canvas-${course.id}-${a.id}`,
         course: courseName,
         title: a.name,
-        dueDate: a.due_at ?? null,
-        dueLabel: a.due_at ? undefined : "No due date",
+        dueDate,
+        dueLabel: dueDate ? undefined : "No due date",
         type: classifyType(a),
         points: a.points_possible ?? null,
         url: a.html_url ?? null,
         status: deriveStatus(a.submission),
         source: "canvas",
-      }));
+        };
+      });
     })
   );
 
